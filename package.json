@@ -1,0 +1,21 @@
+{
+  "name": "stranger-lights",
+  "version": "0.0.1",
+  "description": "",
+  "main": "client.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Seb Lee-Delisle",
+  "license": "ISC",
+  "dependencies": {
+    "color": "^0.11.1",
+    "is-online": "^5.2.0",
+    "rpi-ws281x-native": "^0.8.1",
+    "socket.io": "^1.4.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sebleedelisle/stranger-lights"
+  }
+}
