@@ -4,6 +4,7 @@ var socket = require('socket.io/node_modules/socket.io-client')(config.server ||
 var neopixels = require('rpi-ws281x-native');
 var Colour = require('color');
 var isOnline = require('is-online');
+var exec = require('child_process').exec;
 
 
 var NUM_LEDS = 50,
@@ -205,6 +206,14 @@ function initSocketConnection() {
 	socket.on('disconnect', function(){
 	
 	});
+	
+	socket.on('reboot', function() { 
+		console.log("REBOOT!"); 
+		execute('/sbin/reboot', function(callback){
+	    	console.log(callback);
+		});
+	});
+	
 }
 
 
@@ -308,4 +317,9 @@ process.on('exit', function() {
 	neopixels.reset();
 	
 }); 
+
+function execute(command, callback){
+    exec(command, function(error, stdout, stderr){ callback(stdout); });
+}
+
 
