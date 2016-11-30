@@ -111,7 +111,7 @@ function initialise() {
 	
 	doRainbowStrobe(); 
 	initSocketConnection();
-	setInterval(update, 1000/60); 
+	setInterval(update, 1000/30); 
 	startInternetChecks(); 
 }
 function startInternetChecks(){ 
@@ -150,7 +150,7 @@ function update() {
 				lights[i].turnLightOn();
 			}
 		} 
-	
+			
 		for(var i = 0; i<lights.length; i++) { 
 			var light=lights[i];
 			light.update(); 
@@ -182,7 +182,7 @@ function initSocketConnection() {
 	});
 
 	socket.on('letter', function(data){
-		//console.log('letter', data);
+		console.log('letter', data);
 		if((data.type =='on') || (data.type =='off')) { 
 			if(allLightsOn) { 
 				for(var i = 0; i<lights.length; i++) { 
