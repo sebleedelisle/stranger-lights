@@ -102,9 +102,11 @@ for (var i = 0; i<NUM_LEDS; i++) {
 	lights.push(new Light(lightColoursByIndex[i])); 
 	
 }
-var allLightsOn = false; 
+
+var dimmed = true; 
 var lightsChanged = true; 
 var internetConnection = false; 
+var currentSenderName = ""; 
 
 initialise(); 
 
@@ -112,7 +114,7 @@ function initialise() {
 	
 	doRainbowStrobe(); 
 	initSocketConnection();
-	setInterval(update, 1000/30); 
+	setInterval(update, 1000/60); 
 	startInternetChecks(); 
 }
 function startInternetChecks(){ 
@@ -136,7 +138,7 @@ function update() {
 		if(!internetConnection) hue = 0; 
 		for(var i = 0; i<lights.length; i++) { 
 			if((i==0) || (i==lights.length-1)) {
-				pixelData[i] = Colour().hsl(135,100,(Math.sin(Date.now()*0.01)*0.5+0.5)*50).rgbNumber(); 
+				pixelData[i] = Colour().hsl(hue,100,(Math.sin(Date.now()*0.01)*0.5+0.5)*50).rgbNumber(); 
 			} else { 
 				pixelData[i] = 0;	
 			}
@@ -145,15 +147,12 @@ function update() {
 		
 	} else { 
 
-		if((Date.now()-lastMessageTime > 10000)&& (!allLightsOn)) { 
-			allLightsOn = true; 
-			for(var i = 0; i<lights.length; i++) { 
-				lights[i].turnLightOn();
-			}
-		} 
-			
+		var flickerLight = Math.floor(Math.random()*lights.length*100); 
+		
+		
 		for(var i = 0; i<lights.length; i++) { 
 			var light=lights[i];
+			if(dimmed && (flickerLight==i)) light.startFlicker(0.5);
 			light.update(); 
 			if(light.changed) {
 				pixelData[i] = lights[i].getColour(); 
@@ -161,6 +160,7 @@ function update() {
 			}
 		}
 		if(lightsChanged) {
+			pixelData[0] = Colour().hsl(135,100,(Math.sin(Date.now()*0.01)*0.5+0.5)*50).rgbNumber(); 
 			updatePixels(); 
 			lightsChanged = false; 
 		}
@@ -185,13 +185,7 @@ function initSocketConnection() {
 	socket.on('letter', function(data){
 		console.log('letter', data);
 		if((data.type =='on') || (data.type =='off')) { 
-			if(allLightsOn) { 
-				for(var i = 0; i<lights.length; i++) { 
-					lights[i].turnLightOff(); 
-				} 
-				allLightsOn = false; 
-			
-			}
+		
 			if(lightIndex.hasOwnProperty(data.letter)) { 
 				var pixelnum = lightIndex[data.letter]; 
 				if(data.type=='on') lights[pixelnum].turnLightOn(); 
@@ -201,6 +195,22 @@ function initSocketConnection() {
 
 		lastMessageTime = Date.now();
 
+	});
+	socket.on('resetletters', function(){
+		console.log('resetlights');
+
+		for(var i = 0; i<lights.length; i++) { 
+			lights[i].turnLightOff(); 
+			lights[i].startFlicker(); 
+		} 
+
+		lastMessageTime = Date.now();
+
+	});
+	
+	socket.on('status', function(data) { 
+		if(data.currentControllerName=="") dimmed = true; 
+		else dimmed = false; 
 	});
 
 	socket.on('disconnect', function(){
@@ -240,16 +250,36 @@ function Light( colour) {
 	var lightOn = false; 
 	this.brightness = 0; 
 	this.changed = true; 
-	
+	var turnOnTime = 0; 
+	var turnOffDelay = 0;
+	var fadeSpeed = Math.random()*0.6+0.03; 
+	var flickerSpeed = Math.random()*2+2;
+	var flickerMinBrightness = 0;
+	var flickerCountdown = 0; 
 	this.update = function() { 
 	
 		var newBrightness = this.brightness; 
-
+		
 		if (newBrightness<0.001) newBrightness = 0;
-		if(lightOn) { 
-			newBrightness+=((1-newBrightness))*0.2; 
+		
+		if(flickerCountdown>0) { 
+			flickerCountdown--; 
+			
+			var target = (flickerCountdown%6<flickerSpeed)?0.5:flickerMinBrightness;
+			newBrightness+=((target-newBrightness))*0.8;
+
+		} else if(dimmed){ 
+			newBrightness+=((0.5-newBrightness))*fadeSpeed; 
+			if(Math.abs(0.5-newBrightness)<0.01) newBrightness = 0.5; 	
+		} else if(lightOn) { 
+			newBrightness+=((1-newBrightness))*0.5; 
 		} else { 
-			newBrightness*=0.7;
+			if(turnOffDelay>0) {
+				turnOffDelay--; 
+				newBrightness+=((1-newBrightness))*0.85; 
+			} else { 
+				newBrightness*=0.7;
+			}
 		}
 		
 		this.changed = this.brightness!=newBrightness; 
@@ -259,14 +289,26 @@ function Light( colour) {
 	this.turnLightOn = function() { 
 		if(!lightOn) {
 			lightOn = true; 
-			this.brightness = 1.5; 
+			//this.brightness = 1.5; 
+			turnOnTime = Date.now(); 
 		} 
 	}
 	this.turnLightOff =function() { 
 		if(lightOn) { 
 			lightOn = false; 
+			var framessinceturnon = Math.floor((Date.now()-turnOnTime)/16); // 16 mils per frame
+			if(framessinceturnon<3) { 
+				turnOffDelay = 3; 
+			}
 		}
 	}
+	
+	this.startFlicker = function(strength) { 
+		strength = (typeof strength !== 'undefined') ? strength : 1; // 1 is full strength
+		flickerCountdown = 12; 
+		flickerMinBrightness = 0.5-(strength/2); 
+	}
+	
 	this.getColour = function() { 
 		if(this.brightness <0.001) return 0; 
 		else return Colour().hsl(colour.h, colour.s, colour.l * this.brightness).rgbNumber(); 
@@ -276,11 +318,16 @@ function Light( colour) {
 
 function doRainbowStrobe(){ 
 
-	for(var loop=0; loop<360*2; loop+=10) { 
+	for(var loop=0; loop<360*3; loop+=10) { 
 		for(var i = 0; i<NUM_LEDS; i++) {
 			//console.log(loop, i); 
 			var position = (i*10)+loop; 
-			var b = map(position, 360*1, 360*2, 1,0, true);  
+			var b;
+			if(position<360*2) 
+				b = map(position, 360, 360*2, 0,1, true);  
+			else
+				b = map(position, 360*2, 360*3, 1,0, true);
+				  
 			pixelData[i] = Colour().hsl(position%360, 100,50*b).rgbNumber(); 
 			
 		}
