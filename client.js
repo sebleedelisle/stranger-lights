@@ -253,7 +253,7 @@ function Light( colour) {
 	var turnOnTime = 0; 
 	var turnOffDelay = 0;
 	var fadeSpeed = Math.random()*0.6+0.03; 
-	var flickerSpeed = Math.random()*2+2;
+	var flickerSpeed = Math.random()*1+2;
 	var flickerMinBrightness = 0;
 	var flickerCountdown = 0; 
 	this.update = function() { 
@@ -265,7 +265,7 @@ function Light( colour) {
 		if(flickerCountdown>0) { 
 			flickerCountdown--; 
 			
-			var target = (flickerCountdown%6<flickerSpeed)?0.5:flickerMinBrightness;
+			var target = (flickerCountdown%4<flickerSpeed)?0.5:flickerMinBrightness;
 			newBrightness+=((target-newBrightness))*0.8;
 
 		} else if(dimmed){ 
@@ -305,7 +305,7 @@ function Light( colour) {
 	
 	this.startFlicker = function(strength) { 
 		strength = (typeof strength !== 'undefined') ? strength : 1; // 1 is full strength
-		flickerCountdown = 12; 
+		flickerCountdown = 8; 
 		flickerMinBrightness = 0.5-(strength/2); 
 	}
 	
