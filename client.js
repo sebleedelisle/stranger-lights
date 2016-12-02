@@ -144,7 +144,8 @@ function update() {
 			}
 		}
 		updatePixels();
-		
+		lightsChanged = true; 
+		dimmed = true; 
 	} else { 
 
 		var flickerLight = Math.floor(Math.random()*lights.length*100); 
@@ -160,7 +161,6 @@ function update() {
 			}
 		}
 		if(lightsChanged) {
-			pixelData[0] = Colour().hsl(135,100,(Math.sin(Date.now()*0.01)*0.5+0.5)*50).rgbNumber(); 
 			updatePixels(); 
 			lightsChanged = false; 
 		}
@@ -183,7 +183,7 @@ function initSocketConnection() {
 	});
 
 	socket.on('letter', function(data){
-		console.log('letter', data);
+		//console.log('letter', data);
 		if((data.type =='on') || (data.type =='off')) { 
 		
 			if(lightIndex.hasOwnProperty(data.letter)) { 
@@ -355,15 +355,24 @@ function showMessage(message) {
 	console.log(message);
 }
 
-process.on('SIGINT', function () {
-	neopixels.reset();
-	process.nextTick(function () { process.exit(0); });
-});
 
-process.on('exit', function() { 
+process.stdin.resume();//so the program will not close instantly
+
+function exitHandler(options, err) {
 	neopixels.reset();
-	
-}); 
+    if (err) console.log(err.stack);
+    if (options.exit) process.exit();
+}
+
+//do something when app is closing
+process.on('exit', exitHandler.bind(null,{cleanup:true}));
+
+//catches ctrl+c event
+process.on('SIGINT', exitHandler.bind(null, {exit:true}));
+
+//catches uncaught exceptions
+process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
+
 
 function execute(command, callback){
     exec(command, function(error, stdout, stderr){ callback(stdout); });
