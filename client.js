@@ -209,7 +209,7 @@ function initSocketConnection() {
 	});
 	
 	socket.on('status', function(data) { 
-		if(data.currentControllerName=="") dimmed = true; 
+		if(data.activeSenderName=="") dimmed = true; 
 		else dimmed = false; 
 	});
 
@@ -297,8 +297,8 @@ function Light( colour) {
 		if(lightOn) { 
 			lightOn = false; 
 			var framessinceturnon = Math.floor((Date.now()-turnOnTime)/16); // 16 mils per frame
-			if(framessinceturnon<3) { 
-				turnOffDelay = 3; 
+			if(framessinceturnon<6) { 
+				turnOffDelay = 6; 
 			}
 		}
 	}
